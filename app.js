@@ -72,22 +72,43 @@ app.post('/reservations', (req, res) => {
 
 app.post('/signup', (req, res) => {
     const { name, email, password } = req.body;
-    
+  
     if (!name || !email || !password) {
       return res.status(400).send('Name, email, and password are required.');
     }
   
-    const query = 'INSERT INTO Customers (name, email, password, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())';
+    // Generate a unique customer_id (you can use a library for this or implement your logic)
+    const customer_id = generateUniqueCustomerId();
   
-    connection.query(query, [name, email, password], (err, result) => {
-      if (err) {
-        res.status(500).send(err.message);
-      } else {
-        res.status(201).send('User registered successfully!');
+    // Check if the email is already in use
+    const checkExistingQuery = 'SELECT * FROM Customers WHERE email = ?';
+  
+    connection.query(checkExistingQuery, [email], (checkError, existingUser) => {
+      if (checkError) {
+        return res.status(500).send(checkError.message);
       }
+  
+      if (existingUser.length > 0) {
+        return res.status(400).send('Email is already in use.');
+      }
+  
+      // Insert the new user with the generated customer_id
+      const insertQuery = 'INSERT INTO Customers (customer_id, name, email, password, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())';
+  
+      connection.query(insertQuery, [customer_id, name, email, password], (insertError, result) => {
+        if (insertError) {
+          return res.status(500).send(insertError.message);
+        } else {
+          return res.status(201).send('User registered successfully!');
+        }
+      });
     });
   });
-
+  
+  function generateUniqueCustomerId() {
+    return Math.floor(Math.random() * 1000000);
+  }
+  
 
 app.get('/login', (req, res) => {
     const query = 'SELECT * FROM Customers';
